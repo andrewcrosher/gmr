@@ -1,8 +1,19 @@
 # ------------------------------
-# GMR Bootloader - Stable Build
+# GMR Bootloader - Stable Build (Rich UI Enriched)
 # ------------------------------
 
 import random
+import time as sys_time  # Renamed to avoid conflict with game time logic
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.layout import Layout
+from rich.live import Live
+from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
+from rich import box
+
+# Initialize Rich Console
+console = Console()
 
 MONTHS = [
     "January", "February", "March", "April",
@@ -101,7 +112,7 @@ engines = [
         "acceleration": 3,
         "heat_tolerance": 3,
         "price": 0,
-        "description": "A creaking pre-war single-carb straight-4. Reliable enough to run, but outclassed already."
+        "description": "A creaking pre-war single-carb straight-4."
     },
     {
         "id": "harper_improved",
@@ -112,7 +123,7 @@ engines = [
         "acceleration": 5,
         "heat_tolerance": 4,
         "price": 1500,
-        "description": "A factory-refurbished upgrade. Same bones as the Type-1, but tighter tolerances and better power delivery."
+        "description": "Factory-refurbished upgrade. Tighter tolerances."
     },
     {
         "id": "enzoni_works",
@@ -123,10 +134,9 @@ engines = [
         "acceleration": 7,
         "heat_tolerance": 7,
         "price": 3500,
-        "description": "A refined Italian thoroughbred V12. Smooth, powerful, and surprisingly cool-running — the benchmark for late-40s racing."
+        "description": "Refined Italian thoroughbred V12. Benchmark for the era."
     },
 ]
-
 
 
 # ------------------------------
@@ -161,20 +171,24 @@ class GameState:
 # PLAYER SETUP
 # ------------------------------
 def setup_player(state):
-    print("\nYour father passed away, leaving you his old racing chassis and a worn Level 1 engine.")
-    print("You inherit a small shed for a garage and a single mechanic.")
-    print("This is the start of your racing adventure.\n")
+    console.print(Panel.fit(
+        "[bold cyan]Your father passed away, leaving you his old racing chassis.[/bold cyan]\n"
+        "You inherit a small shed for a garage and a single mechanic.\n"
+        "[italic]This is the start of your racing adventure.[/italic]",
+        title="Welcome to GMR",
+        border_style="cyan"
+    ))
 
     # Ask player for constructor/company name
-    state.player_constructor = input("Enter the name of your racing company: ")
+    state.player_constructor = console.input("[bold yellow]Enter the name of your racing company: [/bold yellow]")
 
     # Garage starting state
-    state.garage.level = 0  # home shed
+    state.garage.level = 0
     state.garage.base_cost = 80
     state.garage.staff_count = 1
     state.garage.staff_salary = 20
 
-    # Starting engine: inherited old unit
+    # Starting engine
     starting_engine = next(e for e in engines if e["id"] == "dad_old")
     state.current_engine = starting_engine
     state.car_speed = starting_engine["speed"]
@@ -183,16 +197,33 @@ def setup_player(state):
     # Player driver is None for now
     state.player_driver = None
 
-    print(f"\nWelcome to {state.player_constructor}! Your journey begins...\n")
+    console.print(f"\n[bold green]Welcome to {state.player_constructor}! Your journey begins...[/bold green]\n")
+    sys_time.sleep(1.5)
 
 
 # ------------------------------
-# RACE LOGIC (FIXED)
+# RACE LOGIC (VISUALIZED)
 # ------------------------------
 def run_race(state, race_name, time):
+    console.clear()
     state.news.append(f"=== {race_name} ===")
     state.last_week_income = 0
-
+    
+    # --- VISUAL RACE SIMULATION ---
+    console.rule(f"[bold red]{race_name}[/bold red]")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        transient=True
+    ) as progress:
+        task = progress.add_task("[green]Racing...", total=100)
+        
+        for i in range(10):
+            sys_time.sleep(0.3)  # Artificial delay for suspense
+            progress.update(task, advance=10)
+    
+    # --- CALCULATION LOGIC ---
     finishers = []
 
     for d in drivers:
@@ -203,11 +234,11 @@ def run_race(state, race_name, time):
 
         # Decide where the car performance comes from
         if d == state.player_driver:
-            # Player's car: use your actual car stats (engine etc.)
+            # Player's car
             car_speed = state.car_speed
             car_reliability = state.car_reliability
         else:
-            # AI drivers: use their constructor stats from the table
+            # AI drivers
             ctor_stats = constructors.get(d["constructor"], {"speed": 5, "reliability": 5})
             car_speed = ctor_stats["speed"]
             car_reliability = ctor_stats["reliability"]
@@ -220,7 +251,7 @@ def run_race(state, race_name, time):
 
         if random.random() < dnf_chance:
             state.news.append(
-                f"{d['name']} ({d['constructor']}) retired due to reliability issues."
+                f"[red]{d['name']} ({d['constructor']}) retired (Engine Failure).[/red]"
             )
             continue
 
@@ -240,23 +271,32 @@ def run_race(state, race_name, time):
             state.constructor_earnings += prize
             state.last_week_income += prize
 
-    # Race classification (Top 10)
+    # Display Race Result Table
+    table = Table(title=f"🏁 {race_name} Results 🏁", box=box.SIMPLE)
+    table.add_column("Pos", style="cyan", justify="right")
+    table.add_column("Driver", style="white")
+    table.add_column("Team", style="dim")
+    table.add_column("Pts", justify="right", style="bold yellow")
+
     for i, (d, _) in enumerate(finishers[:10]):
+        pts = POINTS_TABLE[i] if i < len(POINTS_TABLE) else 0
+        
+        # Highlight player
+        if d == state.player_driver:
+            table.add_row(str(i+1), f"[bold green]{d['name']}[/bold green]", d['constructor'], str(pts))
+        else:
+            table.add_row(str(i+1), d['name'], d['constructor'], str(pts) if pts > 0 else "")
+
         state.news.append(f"{i+1}. {d['name']} ({d['constructor']})")
 
-    # Championship standings (Top 10)
-    sorted_points = sorted(state.points.items(), key=lambda x: x[1], reverse=True)
-    state.news.append("Championship Standings (Top 10):")
-    for name, pts in sorted_points[:10]:
-        driver = next(d for d in drivers if d["name"] == name)
-        state.news.append(f"{name} ({driver['constructor']}): {pts} pts")
+    console.print(table)
+    console.input("\n[dim]Press Enter to continue...[/dim]")
 
-    # End of season
+    # End of season check
     if time.absolute_week == max(race_calendar.keys()):
         winner = max(state.points, key=state.points.get)
-        state.news.append(f"*** {winner} wins the {time.year} Championship! ***")
+        state.news.append(f"*** [bold gold1]{winner} wins the {time.year} Championship![/bold gold1] ***")
         state.reset_championship()
-
 
 
 # ------------------------------
@@ -265,73 +305,88 @@ def run_race(state, race_name, time):
 def show_finances(state):
     garage = state.garage
     staff_cost = garage.staff_count * garage.staff_salary
-    print("\n=== Finances ===")
-    print("Weekly Outgoings:")
-    print(f"  Base garage cost: £{garage.base_cost}")
-    print(f"  Staff cost ({garage.staff_count} staff): £{staff_cost}")
+    
+    table = Table(title="Finances", box=box.ROUNDED)
+    table.add_column("Item", style="cyan")
+    table.add_column("Amount", justify="right")
+
+    table.add_row("Base Garage Cost", f"£{garage.base_cost}")
+    table.add_row(f"Staff Cost ({garage.staff_count})", f"£{staff_cost}")
+    
     if state.last_week_purchases > 0:
-        print(f"  One-off purchases (engines/parts): £{state.last_week_purchases}")
-    print(f"Total Outgoings this week: £{state.last_week_outgoings}")
-    print(f"Income this week: £{state.last_week_income}")
-    print(f"Total Money: £{state.money}")
-    print(f"Cumulative Constructor Earnings: £{state.constructor_earnings}")
+        table.add_row("Parts/Engines", f"[red]£{state.last_week_purchases}[/red]")
+    
+    table.add_section()
+    table.add_row("Total Outgoings", f"[red]£{state.last_week_outgoings}[/red]")
+    table.add_row("Last Week Income", f"[green]£{state.last_week_income}[/green]")
+    table.add_section()
+    
+    # Highlight total money
+    money_style = "bold green" if state.money > 0 else "bold red"
+    table.add_row("Current Balance", f"[{money_style}]£{state.money}[/{money_style}]")
+    table.add_row("Lifetime Earnings", f"£{state.constructor_earnings}", style="dim")
+
+    console.print(table)
 
 
 def show_engine_shop(state):
-    print("\n=== Racecar Parts: Engines ===")
-
-    # Show current engine
+    console.clear()
+    
+    # Current Engine Panel
     if state.current_engine:
         eng = state.current_engine
-        print("Current Engine:")
-        print(f"  {eng['name']} (Source: {eng['supplier']})")
-        print(f"    Speed .............. {eng['speed']}")
-        print(f"    Reliability ........ {eng['reliability']}")
-        print(f"    Acceleration ....... {eng['acceleration']}")
-        print(f"    Heat Tolerance ..... {eng['heat_tolerance']}")
-        print(f"    Notes: {eng['description']}")
+        txt = (
+            f"[bold]{eng['name']}[/bold]\n"
+            f"Supplier: {eng['supplier']}\n\n"
+            f"Speed:       {'[cyan]▮[/cyan]' * eng['speed']}{'[dim]▮[/dim]' * (10-eng['speed'])}\n"
+            f"Reliability: {'[green]▮[/green]' * eng['reliability']}{'[dim]▮[/dim]' * (10-eng['reliability'])}\n"
+            f"Accel:       {eng['acceleration']}\n"
+            f"Heat Tol:    {eng['heat_tolerance']}\n\n"
+            f"[italic]{eng['description']}[/italic]"
+        )
+        console.print(Panel(txt, title="Current Installed Engine", border_style="blue"))
     else:
-        print("Current Engine: None installed")
+        console.print("[red]No engine installed![/red]")
 
-    print("\nAvailable Engines:")
+    # Shop Table
+    table = Table(title="Engine Supplier Catalogue", box=box.HEAVY_HEAD)
+    table.add_column("#", style="dim")
+    table.add_column("Name", style="bold")
+    table.add_column("Stats (Spd/Rel)", justify="center")
+    table.add_column("Price", justify="right", style="green")
+    table.add_column("Description")
+
     for idx, engine in enumerate(engines, start=1):
-        marker = " [CURRENT]" if state.current_engine and engine["id"] == state.current_engine["id"] else ""
-        print(f"\n{idx}. {engine['name']}{marker}")
-        print(f"   Supplier: {engine['supplier']}")
-        print(f"     Speed .............. {engine['speed']}")
-        print(f"     Reliability ........ {engine['reliability']}")
-        print(f"     Acceleration ....... {engine['acceleration']}")
-        print(f"     Heat Tolerance ..... {engine['heat_tolerance']}")
-        print(f"     Price: £{engine['price']}")
-        print(f"     About: {engine['description']}")
+        marker = " [bold blue](OWNED)[/bold blue]" if state.current_engine and engine["id"] == state.current_engine["id"] else ""
+        stats = f"S:{engine['speed']} R:{engine['reliability']}"
+        table.add_row(str(idx), f"{engine['name']}{marker}", stats, f"£{engine['price']}", engine['description'])
 
-
+    console.print(table)
 
     # Buying logic
-    choice = input("\nEnter the number of an engine to buy and install, or press Enter to go back: ").strip()
+    choice = console.input("\nEnter [bold cyan]ID[/bold cyan] to buy, or Enter to go back: ").strip()
 
     if choice == "":
-        return  # back to Garage menu
+        return
 
     if not choice.isdigit():
-        print("Invalid input. No purchase made.")
+        console.print("[red]Invalid input.[/red]")
         return
 
     idx = int(choice)
     if idx < 1 or idx > len(engines):
-        print("Invalid engine selection.")
+        console.print("[red]Invalid selection.[/red]")
         return
 
     selected_engine = engines[idx - 1]
 
-    # Already using this engine
     if state.current_engine and selected_engine["id"] == state.current_engine["id"]:
-        print("You already have this engine installed.")
+        console.print("[yellow]You already have this engine installed.[/yellow]")
         return
 
     price = selected_engine["price"]
     if price > state.money:
-        print(f"You cannot afford this engine. You need £{price}, but only have £{state.money}.")
+        console.print(f"[bold red]Insufficient Funds![/bold red] Cost: £{price}, You have: £{state.money}")
         return
 
     # Perform purchase
@@ -342,89 +397,86 @@ def show_engine_shop(state):
     state.car_speed = selected_engine["speed"]
     state.car_reliability = selected_engine["reliability"]
 
-    print(f"\nYou have bought and installed the {selected_engine['name']}.")
-    print(f"New car stats - Speed: {state.car_speed}, Reliability: {state.car_reliability}")
+    console.print(f"[bold green]Purchased and installed {selected_engine['name']}![/bold green]")
+    sys_time.sleep(1.5)
 
 
 def show_driver_market(state):
-    print("\n=== Driver Market ===")
-
-    # Show current driver
+    console.clear()
+    
+    # Current Driver
     if state.player_driver:
         d = state.player_driver
-        print("Current Driver:")
-        print(f"  {d['name']} (Skill {d['skill']}, Consistency {d['consistency']})")
-        print(f"  Racing for: {d['constructor']}")
+        console.print(Panel(
+            f"[bold]{d['name']}[/bold] (Skill: {d['skill']}, Consistency: {d['consistency']})", 
+            title="Current Driver", border_style="green"
+        ))
     else:
-        print("Current Driver: None hired")
+        console.print(Panel("No driver hired.", title="Current Driver", border_style="red"))
 
-    # Build market list: all non-Enzoni drivers
     market_drivers = [d for d in drivers if d["constructor"] != "Enzoni"]
 
-    print("\nAvailable Drivers:")
+    table = Table(title="Driver Market", box=box.SIMPLE)
+    table.add_column("#", style="dim")
+    table.add_column("Name", style="bold white")
+    table.add_column("Skill", justify="center")
+    table.add_column("Consistency", justify="center")
+    table.add_column("Status", style="italic")
+
     for idx, d in enumerate(market_drivers, start=1):
-        marker = ""
-        if state.player_driver is d:
-            marker = " [CURRENT]"
+        status = "Your Driver" if state.player_driver is d else d['constructor']
+        style = "green" if state.player_driver is d else "white"
+        table.add_row(
+            str(idx), 
+            f"[{style}]{d['name']}[/{style}]", 
+            str(d['skill']), 
+            str(d['consistency']), 
+            status
+        )
 
-        print(f"{idx}. {d['name']}{marker}")
-        print(f"   Skill: {d['skill']}  Consistency: {d['consistency']}")
-        print(f"   Registered constructor: {d['constructor']}")
+    console.print(table)
+    choice = console.input("\nEnter [bold cyan]ID[/bold cyan] to hire, or Enter to go back: ").strip()
 
-    choice = input("\nEnter the number of a driver to hire, or press Enter to go back: ").strip()
-
-    if choice == "":
-        return  # back to main menu
-
-    if not choice.isdigit():
-        print("Invalid input. No hiring done.")
+    if choice == "" or not choice.isdigit():
         return
 
     idx = int(choice)
     if idx < 1 or idx > len(market_drivers):
-        print("Invalid driver selection.")
         return
 
     selected_driver = market_drivers[idx - 1]
-
-    # Hire / assign to your team
     state.player_driver = selected_driver
-    selected_driver["constructor"] = state.player_constructor  # now races for your company
+    selected_driver["constructor"] = state.player_constructor
 
-    print(f"\nYou have hired {selected_driver['name']} as your driver.")
-    print(f"They will now race for {state.player_constructor}.")
+    console.print(f"[bold green]Hired {selected_driver['name']}![/bold green]")
+    sys_time.sleep(1)
 
 
 def show_garage(state):
     garage = state.garage
-    print("\n=== Garage / Car Info ===")
-    print(f"Garage Level: {garage.level}")
-    print(f"Base Weekly Cost: £{garage.base_cost}")
-    print(f"Staff Count: {garage.staff_count} (Salary £{garage.staff_salary} each)")
-    print(f"Customer Parts Only: {garage.customer_parts_only}")
-    print(f"R&D Enabled: {garage.r_and_d_enabled}")
-    print(f"Factory Team: {garage.factory_team}")
+    
+    # Create a layout for nice info display
+    info_table = Table.grid(padding=1)
+    info_table.add_column(style="bold cyan", justify="right")
+    info_table.add_column(style="white")
+    
+    info_table.add_row("Garage Level:", str(garage.level))
+    info_table.add_row("Staff:", f"{garage.staff_count} (Cost: £{garage.staff_count * garage.staff_salary}/wk)")
+    info_table.add_row("Base Cost:", f"£{garage.base_cost}/wk")
 
-    print("\nYour Car:")
-    if state.current_engine:
-        eng = state.current_engine
-        print(f"  Engine: {eng['name']} (Supplier: {eng['supplier']})")
-        print(f"    Speed .............. {eng['speed']}")
-        print(f"    Reliability ........ {eng['reliability']}")
-        print(f"    Acceleration ....... {eng['acceleration']}")
-        print(f"    Heat Tolerance ..... {eng['heat_tolerance']}")
-        print(f"    Notes: {eng['description']}")
-    else:
-        print("  Engine: None installed")
+    # Car Stats visualization
+    eng_name = state.current_engine['name'] if state.current_engine else "None"
+    
+    car_panel = Panel(
+        f"Engine: [bold]{eng_name}[/bold]\n"
+        f"Speed:       [cyan]{state.car_speed}[/cyan]\n"
+        f"Reliability: [green]{state.car_reliability}[/green]",
+        title="Car Status",
+        border_style="yellow"
+    )
 
-
-    print(f"  Overall Speed: {state.car_speed}")
-    print(f"  Overall Reliability: {state.car_reliability}")
-
-    if state.player_driver:
-        print(f"Your Driver: {state.player_driver['name']} (Skill {state.player_driver['skill']}, Consistency {state.player_driver['consistency']})")
-    else:
-        print("No driver currently hired.")
+    console.print(Panel(info_table, title="Facilities", border_style="blue"))
+    console.print(car_panel)
 
 
 # ------------------------------
@@ -433,11 +485,13 @@ def show_garage(state):
 def run_game():
     time = GameTime()
     state = GameState()
+    
+    console.clear()
     setup_player(state)
     state.reset_championship()
 
     while True:
-        # Auto-race if there's a race this week AND we haven't run it yet
+        # Auto-race logic remains same
         if (
             time.absolute_week in race_calendar
             and time.absolute_week not in state.completed_races
@@ -446,74 +500,101 @@ def run_game():
             state.completed_races.add(time.absolute_week)
 
 
-        # Print news
+        console.clear()
+        
+        # --- HEADER ---
+        console.print(Panel(
+            f"[bold white]Week {time.week}[/bold white] | [cyan]{MONTHS[time.month]} {time.year}[/cyan]\n"
+            f"Money: [bold green]£{state.money}[/bold green] | "
+            f"Car: [yellow]{state.player_constructor}[/yellow] | "
+            f"Driver: {state.player_driver['name'] if state.player_driver else 'None'}",
+            style="on black"
+        ))
+
+        # --- NEWS TICKER ---
         if state.news:
-            print("\n=== News ===")
+            console.print("[bold underline]Recent News:[/bold underline]")
             for item in state.news:
-                print(item)
-            print("----------------")
+                console.print(f" > {item}")
+            console.print("")
             state.news.clear()
 
-        # Main menu
-        print(f"\n--- Week {time.week}, {MONTHS[time.month]} {time.year} ---")
-        print("1. Calendar")
-        print("2. Championship")
-        print("3. Finances")
-        print("4. Garage")
-        print("5. Driver Market")
-        print("6. Advance Week")
+        # --- MAIN MENU TABLE ---
+        menu = Table(show_header=False, box=None)
+        menu.add_column("Option", style="bold cyan")
+        menu.add_column("Description")
+        
+        menu.add_row("1", "View Calendar")
+        menu.add_row("2", "Championship Standings")
+        menu.add_row("3", "Finances")
+        menu.add_row("4", "Garage Management")
+        menu.add_row("5", "Driver Market")
+        menu.add_row("6", "[bold yellow]Advance Week[/bold yellow]")
+        
+        console.print(Panel(menu, title="Main Menu", border_style="white"))
 
-        choice = input("> ")
+        choice = console.input("> ")
 
         if choice == "1":
-            print(race_calendar.get(time.absolute_week, "No race this week."))
+            evt = race_calendar.get(time.absolute_week, "No race this week.")
+            console.print(Panel(f"[bold]{evt}[/bold]", title=f"Week {time.absolute_week} Event"))
+            console.input("[dim]Press Enter...[/dim]")
+            
         elif choice == "2":
-            print("\n=== Championship Standings (Top 10) ===")
+            table = Table(title="Championship Standings", box=box.SIMPLE)
+            table.add_column("Pos", justify="right", style="cyan")
+            table.add_column("Driver", style="bold white")
+            table.add_column("Team", style="dim")
+            table.add_column("Points", justify="right", style="bold yellow")
+            
             sorted_points = sorted(state.points.items(), key=lambda x: x[1], reverse=True)
-            for name, pts in sorted_points[:10]:
+            for i, (name, pts) in enumerate(sorted_points[:10], start=1):
                 driver = next(d for d in drivers if d["name"] == name)
-                print(f"{name} ({driver['constructor']}): {pts} pts")
+                # Highlight player row
+                style = "green" if driver['constructor'] == state.player_constructor else "white"
+                table.add_row(str(i), f"[{style}]{name}[/{style}]", driver['constructor'], str(pts))
+            
+            console.print(table)
+            console.input("[dim]Press Enter...[/dim]")
+
         elif choice == "3":
             show_finances(state)
+            console.input("[dim]Press Enter...[/dim]")
+            
         elif choice == "4":  # Garage menu
             while True:
-                print("\n=== Garage Menu ===")
-                print("1. View Garage Info")
-                print("2. Racecar Parts / Engine Shop")
-                print("3. View Staff (coming soon)")
-                print("4. Back to Main Menu")
-
-                sub_choice = input("> ")
-
-                if sub_choice == "1":
+                console.clear()
+                console.print(Panel("[1] View Stats\n[2] Engine Shop\n[3] Staff (WIP)\n[4] Back", title="Garage"))
+                sub = console.input("Garage > ")
+                if sub == "1":
                     show_garage(state)
-                elif sub_choice == "2":
+                    console.input("Press Enter...")
+                elif sub == "2":
                     show_engine_shop(state)
-                elif sub_choice == "3":
-                    print("Feature coming soon!")
-                elif sub_choice == "4":
+                elif sub == "3":
+                    console.print("[yellow]Coming soon![/yellow]")
+                    sys_time.sleep(1)
+                elif sub == "4":
                     break
-                else:
-                    print("Invalid choice.")
+
         elif choice == "5":
             show_driver_market(state)
+            
         elif choice == "6":
-            # Apply weekly running costs for the week that just finished
+            # Costs logic remains identical
             staff_cost = state.garage.staff_count * state.garage.staff_salary
             base_outgoings = state.garage.base_cost + staff_cost
-
-            # total outgoings = base + staff + one-off purchases (for display)
             state.last_week_outgoings = base_outgoings + state.last_week_purchases
-
-            # Deduct ONLY the recurring weekly costs from money
             state.money -= base_outgoings
-
-            # Start a new week: clear purchases for the next period
             state.last_week_purchases = 0
-
             time.advance_week()
+            
+            # Show a small transition animation
+            with console.status("[bold green]Processing week...[/bold green]", spinner="dots"):
+                sys_time.sleep(0.5)
         else:
-            print("Invalid choice.")
+            console.print("[red]Invalid choice.[/red]")
+            sys_time.sleep(0.5)
 
 
 if __name__ == "__main__":
