@@ -3,6 +3,8 @@ from .data import drivers
 # ------------------------------
 # TIME SYSTEM
 # ------------------------------
+
+
 class GameTime:
     def __init__(self, year=1947):
         self.year = year
@@ -19,7 +21,7 @@ class GameTime:
             if self.month > 11:
                 self.month = 0
                 self.year += 1
-    
+
     @property
     def week_of_year(self):
         """Returns the week number of the current year (1-48)."""
@@ -36,10 +38,11 @@ class GameTime:
         gt.absolute_week = data["absolute_week"]
         return gt
 
-
 # ------------------------------
 # GARAGE STATE
 # ------------------------------
+
+
 class GarageState:
     def __init__(self):
         self.level = 0  # 0 = home shed
@@ -61,10 +64,11 @@ class GarageState:
         gs.__dict__.update(data)
         return gs
 
-
 # ------------------------------
 # GAME STATE
 # ------------------------------
+
+
 class GameState:
     def __init__(self):
         self.money = 5000

@@ -4,7 +4,7 @@ from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
 from rich import box
 
-from .config import POINTS_TABLE, PRIZE_MONEY, CONSTRUCTOR_SHARE, ERA_RELIABILITY_MULTIPLIER
+from .config import POINTS_TABLE, PRIZE_MONEY, CONSTRUCTOR_SHARE
 from .data import drivers, constructors, race_calendar, weather_options
 from .ui import console
 from .mechanics import calculate_driver_performance
@@ -12,6 +12,8 @@ from .mechanics import calculate_driver_performance
 # ------------------------------
 # RACE LOGIC (VISUALIZED)
 # ------------------------------
+
+
 def run_race(state, race_info, time):
     race_name = race_info['name']
     race_type = race_info['type']
@@ -21,11 +23,15 @@ def run_race(state, race_info, time):
     state.news.append(f"=== {race_name} ===")
     state.news.append(f"Conditions: {weather} | Track: {race_type}")
     state.last_week_income = 0
-    
+
     # --- VISUAL RACE SIMULATION ---
     console.rule(f"[bold red]{race_name}[/bold red]")
-    console.print(f"[bold white]Conditions:[/bold white] {weather}  [bold white]Track Type:[/bold white] {race_type}", justify="center")
-    
+    conditions_text = (
+        f"[bold white]Conditions:[/bold white] {weather}  "
+        f"[bold white]Track Type:[/bold white] {race_type}"
+    )
+    console.print(conditions_text, justify="center")
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -33,11 +39,11 @@ def run_race(state, race_info, time):
         transient=True
     ) as progress:
         task = progress.add_task("[green]Racing...", total=100)
-        
+
         for i in range(10):
             sys_time.sleep(0.3)  # Artificial delay for suspense
             progress.update(task, advance=10)
-    
+
     # --- CALCULATION LOGIC ---
     finishers = []
 
@@ -47,9 +53,10 @@ def run_race(state, race_info, time):
         )
 
         if not did_finish:
-            state.news.append(
+            retire_msg = (
                 f"[red]{d['name']} ({d['constructor']}) retired ({failure_reason}).[/red]"
             )
+            state.news.append(retire_msg)
             continue
 
         finishers.append((d, performance))
@@ -77,7 +84,7 @@ def run_race(state, race_info, time):
 
     for i, (d, _) in enumerate(finishers[:10]):
         pts = POINTS_TABLE[i] if i < len(POINTS_TABLE) else 0
-        
+
         # Highlight player
         if d == state.player_driver:
             table.add_row(str(i+1), f"[bold green]{d['name']}[/bold green]", d['constructor'], str(pts))
@@ -93,14 +100,17 @@ def run_race(state, race_info, time):
     # Check if we have completed the last race of the year
     last_race_week = max(race_calendar.keys())
     week_of_year = time.week_of_year
-    
-    if week_of_year == last_race_week and f"{time.year}-{week_of_year}" in state.completed_races:
+
+    if (
+        week_of_year == last_race_week
+        and f"{time.year}-{week_of_year}" in state.completed_races
+    ):
         # Only trigger end of season once
         winner = max(state.points, key=state.points.get)
         pts = state.points[winner]
         state.news.append(f"*** [bold gold1]{winner} wins the {time.year} Championship! ({pts} pts)[/bold gold1] ***")
-        
+
         state.history.append({"year": time.year, "winner": winner, "points": pts})
-        
+
         state.reset_championship()
         # Note: We don't clear completed_races because we use (year, week) keys now

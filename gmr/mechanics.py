@@ -2,13 +2,14 @@ import random
 from .config import ERA_RELIABILITY_MULTIPLIER
 from .data import random_events
 
+
 def process_random_events(state):
-    """
-    Checks for and applies random events.
+    """Checks for and applies random events.
+
     Returns a list of event messages that occurred.
     """
     occurred_events = []
-    
+
     # Shuffle events so we don't always check them in the same order
     events_shuffled = list(random_events)
     random.shuffle(events_shuffled)
@@ -18,30 +19,34 @@ def process_random_events(state):
             # Apply effect
             if event["effect_type"] == "money":
                 state.money += event["value"]
-                
+
             elif event["effect_type"] == "car_speed":
                 state.car_speed += event["value"]
                 # Also update current engine stats if possible to persist
                 if state.current_engine:
-                    state.current_engine['speed'] += event["value"]
+                    state.current_engine["speed"] += event["value"]
 
             msg = f"[bold]{event['title']}[/bold]: {event['text']}"
             if event["effect_type"] == "money":
-                 msg += f" ({'Gain' if event['value'] > 0 else 'Cost'}: £{abs(event['value'])})"
+                msg += (
+                    f" ({'Gain' if event['value'] > 0 else 'Cost'}: £{abs(event['value'])})"
+                )
             elif event["effect_type"] == "car_speed":
                 msg += f" (Speed +{event['value']})"
-            
+
             occurred_events.append(msg)
-            
+
             # Limit to one event per week for now
             return occurred_events
 
     return occurred_events
 
 
-def calculate_driver_performance(driver, state, constructors, weather="Sunny", race_type="Balanced"):
-    """
-    Calculates the race performance for a driver.
+def calculate_driver_performance(
+    driver, state, constructors, weather="Sunny", race_type="Balanced"
+):
+    """Calculates the race performance for a driver.
+
     Returns a tuple (performance_score, did_finish, failure_reason)
     """
     # Weights based on conditions
@@ -57,7 +62,7 @@ def calculate_driver_performance(driver, state, constructors, weather="Sunny", r
     elif race_type == "Technical":
         speed_weight = 0.7
         handling_weight = 0.8
-    
+
     # Weather Effects
     if weather == "Rain":
         speed_weight *= 0.6
@@ -69,7 +74,9 @@ def calculate_driver_performance(driver, state, constructors, weather="Sunny", r
 
     # Base driver performance with consistency variance
     consistency_factor = driver["consistency"] / 10
-    variance = random.uniform(-1, 1) * (1 - consistency_factor) * driver["skill"]
+    variance = (
+        random.uniform(-1, 1) * (1 - consistency_factor) * driver["skill"]
+    )
     driver_score = (driver["skill"] + variance) * skill_weight
 
     # Decide where the car performance comes from
@@ -85,7 +92,7 @@ def calculate_driver_performance(driver, state, constructors, weather="Sunny", r
         car_speed = ctor_stats["speed"]
         car_handling = 5  # Base handling for AI
         car_reliability = ctor_stats["reliability"]
-        car_durability = 5 # Base durability for AI
+        car_durability = 5  # Base durability for AI
 
     # Performance formula: (Skill * W) + (Speed * W) + (Handling * W)
     car_score = (car_speed * speed_weight) + (car_handling * handling_weight)
@@ -94,14 +101,18 @@ def calculate_driver_performance(driver, state, constructors, weather="Sunny", r
     # Reliability + DNF chance
     # Combined reliability factor (Engine Rel + Chassis Durability)
     total_reliability = (car_reliability + car_durability) / 2
-    dnf_chance = ((11 - total_reliability) * 0.02 * ERA_RELIABILITY_MULTIPLIER) + reliability_penalty
+    dnf_chance = (
+        ((11 - total_reliability) * 0.02 * ERA_RELIABILITY_MULTIPLIER) + reliability_penalty
+    )
 
     did_finish = True
     failure_reason = None
 
     if random.random() < dnf_chance:
         did_finish = False
-        failure_reason = "Engine Failure" if random.random() > 0.5 else "Mechanical Failure"
+        failure_reason = (
+            "Engine Failure" if random.random() > 0.5 else "Mechanical Failure"
+        )
         if weather == "Rain" and random.random() > 0.7:
             failure_reason = "Crash (Wet)"
 

@@ -3,28 +3,114 @@ import copy
 # Game Data
 
 _default_drivers = [
-    {"name": "Carlo Bianci", "constructor": "Enzoni", "skill": 7, "consistency": 6, "salary": 100, "signing_fee": 500},
-    {"name": "Alberto Rossi", "constructor": "Enzoni", "skill": 7, "consistency": 7, "salary": 110, "signing_fee": 550},
+    {
+        "name": "Carlo Bianci",
+        "constructor": "Enzoni",
+        "skill": 7,
+        "consistency": 6,
+        "salary": 100,
+        "signing_fee": 500,
+    },
+    {
+        "name": "Alberto Rossi",
+        "constructor": "Enzoni",
+        "skill": 7,
+        "consistency": 7,
+        "salary": 110,
+        "signing_fee": 550,
+    },
 
-    {"name": "Emmanuel Dubois", "constructor": "Independent", "skill": 5, "consistency": 5, "salary": 40, "signing_fee": 150},
-    {"name": "George McCallister", "constructor": "Independent", "skill": 5, "consistency": 5, "salary": 40, "signing_fee": 150},
-    {"name": "Hans Keller", "constructor": "Independent", "skill": 5, "consistency": 4, "salary": 35, "signing_fee": 120},
-    {"name": "Luis Navarro", "constructor": "Independent", "skill": 4, "consistency": 6, "salary": 30, "signing_fee": 100},
-    {"name": "Ivan Petrov", "constructor": "Independent", "skill": 4, "consistency": 5, "salary": 30, "signing_fee": 100},
-    {"name": "Antonio Marquez", "constructor": "Independent", "skill": 5, "consistency": 3, "salary": 35, "signing_fee": 120},
+    {
+        "name": "Emmanuel Dubois",
+        "constructor": "Independent",
+        "skill": 5,
+        "consistency": 5,
+        "salary": 40,
+        "signing_fee": 150,
+    },
+    {
+        "name": "George McCallister",
+        "constructor": "Independent",
+        "skill": 5,
+        "consistency": 5,
+        "salary": 40,
+        "signing_fee": 150,
+    },
+    {
+        "name": "Hans Keller",
+        "constructor": "Independent",
+        "skill": 5,
+        "consistency": 4,
+        "salary": 35,
+        "signing_fee": 120,
+    },
+    {
+        "name": "Luis Navarro",
+        "constructor": "Independent",
+        "skill": 4,
+        "consistency": 6,
+        "salary": 30,
+        "signing_fee": 100,
+    },
+    {
+        "name": "Ivan Petrov",
+        "constructor": "Independent",
+        "skill": 4,
+        "consistency": 5,
+        "salary": 30,
+        "signing_fee": 100,
+    },
+    {
+        "name": "Antonio Marquez",
+        "constructor": "Independent",
+        "skill": 5,
+        "consistency": 3,
+        "salary": 35,
+        "signing_fee": 120
+    },
 
     # Extra independents for driver market
-    {"name": "Franco Moretti", "constructor": "Independent", "skill": 6, "consistency": 6, "salary": 60, "signing_fee": 250},
-    {"name": "Peter Lang", "constructor": "Independent", "skill": 6, "consistency": 5, "salary": 55, "signing_fee": 220},
-    {"name": "Jan Novak", "constructor": "Independent", "skill": 5, "consistency": 6, "salary": 45, "signing_fee": 180},
-    {"name": "Mikel Herrera", "constructor": "Independent", "skill": 4, "consistency": 7, "salary": 35, "signing_fee": 140},
+    {
+        "name": "Franco Moretti",
+        "constructor": "Independent",
+        "skill": 6,
+        "consistency": 6,
+        "salary": 60,
+        "signing_fee": 250,
+    },
+    {
+        "name": "Peter Lang",
+        "constructor": "Independent",
+        "skill": 6,
+        "consistency": 5,
+        "salary": 55,
+        "signing_fee": 220,
+    },
+    {
+        "name": "Jan Novak",
+        "constructor": "Independent",
+        "skill": 5,
+        "consistency": 6,
+        "salary": 45,
+        "signing_fee": 180,
+    },
+    {
+        "name": "Mikel Herrera",
+        "constructor": "Independent",
+        "skill": 4,
+        "consistency": 7,
+        "salary": 35,
+        "signing_fee": 140,
+    },
 ]
 
 drivers = []
 
+
 def reset_drivers():
     drivers.clear()
     drivers.extend(copy.deepcopy(_default_drivers))
+
 
 reset_drivers()
 

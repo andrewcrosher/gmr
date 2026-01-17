@@ -1,1 +1,1 @@
-from .app import run_game
+from .app import run_game  # noqa: F401
