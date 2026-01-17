@@ -54,7 +54,7 @@ This project is primarily developed on Windows using PowerShell.
 
 ### Running Tests
 
-The project uses pytest for testing:
+The project is set up to use `pytest`, though no tests are currently implemented.
 
 ```powershell
 pytest
@@ -62,7 +62,15 @@ pytest
 
 ### Project Structure
 
-- `main.py`: Main game logic and entry point
+- `main.py`: Entry point script
+- `gmr/`: Game package source code
+  - `app.py`: Main application loop and setup
+  - `race.py`: Race logic and simulation
+  - `mechanics.py`: Game mechanics and calculations
+  - `ui.py`: UI rendering with Rich
+  - `models.py`: Data models (GameState, etc.)
+  - `data.py`: Static game data (Drivers, Engines, etc.)
+  - `config.py`: Configuration constants
 - `requirements.txt`: Python dependencies
 - `README.md`: This file
 
