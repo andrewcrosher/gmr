@@ -49,4 +49,4 @@ jobs:
       # Run the test suite. This ensures the codebase integrity.
       - name: Test with pytest
         run: |
-          pytest
+          python -m pytest
