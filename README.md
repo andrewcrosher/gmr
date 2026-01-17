@@ -56,7 +56,7 @@ This project is primarily developed on Windows using PowerShell.
 
 ### Running Tests
 
-The project is set up to use `pytest`, though no tests are currently implemented.
+The project uses `pytest` for testing.
 
 ```powershell
 pytest
