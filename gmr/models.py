@@ -88,6 +88,7 @@ class GameState:
 
         # Track which absolute weeks have already had a race run
         self.completed_races = set()
+        self.history = []
 
     def reset_championship(self):
         self.points = {d["name"]: 0 for d in drivers}

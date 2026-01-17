@@ -35,9 +35,15 @@ constructors = {
 
 race_calendar = {
     5: {"name": "Marblethorpe GP", "type": "Balanced"},
-    12: {"name": "Château-des-Prés GP", "type": "High Speed"},
-    20: {"name": "Vallone GP", "type": "Technical"},
-    28: {"name": "Rougemont GP", "type": "Balanced"}
+    9: {"name": "San Rico GP", "type": "Technical"},
+    13: {"name": "Château-des-Prés GP", "type": "High Speed"},
+    18: {"name": "Nordland GP", "type": "High Speed"},
+    22: {"name": "Vallone GP", "type": "Technical"},
+    26: {"name": "Britannia GP", "type": "Balanced"},
+    30: {"name": "Rougemont GP", "type": "Balanced"},
+    35: {"name": "Autodromo Nazionale", "type": "High Speed"},
+    40: {"name": "Grand Prix of the Americas", "type": "Technical"},
+    44: {"name": "Season Finale", "type": "Balanced"}
 }
 
 weather_options = ["Sunny", "Overcast", "Rain"]

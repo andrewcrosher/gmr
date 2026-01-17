@@ -97,6 +97,10 @@ def run_race(state, race_info, time):
     if week_of_year == last_race_week and f"{time.year}-{week_of_year}" in state.completed_races:
         # Only trigger end of season once
         winner = max(state.points, key=state.points.get)
-        state.news.append(f"*** [bold gold1]{winner} wins the {time.year} Championship![/bold gold1] ***")
+        pts = state.points[winner]
+        state.news.append(f"*** [bold gold1]{winner} wins the {time.year} Championship! ({pts} pts)[/bold gold1] ***")
+        
+        state.history.append({"year": time.year, "winner": winner, "points": pts})
+        
         state.reset_championship()
         # Note: We don't clear completed_races because we use (year, week) keys now

@@ -32,7 +32,12 @@ def setup_player(state):
     ))
 
     # Ask player for constructor/company name
-    state.player_constructor = console.input("[bold yellow]Enter the name of your racing company: [/bold yellow]")
+    while True:
+        name = console.input("[bold yellow]Enter the name of your racing company: [/bold yellow]").strip()
+        if name:
+            state.player_constructor = name
+            break
+        console.print("[red]Name cannot be empty.[/red]")
 
     # Garage starting state
     state.garage.level = 0
