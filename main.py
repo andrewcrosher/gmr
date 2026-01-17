@@ -47,6 +47,11 @@ class GameTime:
             if self.month > 11:
                 self.month = 0
                 self.year += 1
+    
+    @property
+    def week_of_year(self):
+        """Returns the week number of the current year (1-48)."""
+        return (self.month * 4) + self.week
 
 
 # ------------------------------
@@ -293,10 +298,16 @@ def run_race(state, race_name, time):
     console.input("\n[dim]Press Enter to continue...[/dim]")
 
     # End of season check
-    if time.absolute_week == max(race_calendar.keys()):
+    # Check if we have completed the last race of the year
+    last_race_week = max(race_calendar.keys())
+    week_of_year = time.week_of_year
+    
+    if week_of_year == last_race_week and f"{time.year}-{week_of_year}" in state.completed_races:
+        # Only trigger end of season once
         winner = max(state.points, key=state.points.get)
         state.news.append(f"*** [bold gold1]{winner} wins the {time.year} Championship![/bold gold1] ***")
         state.reset_championship()
+        # Note: We don't clear completed_races because we use (year, week) keys now
 
 
 # ------------------------------
@@ -444,6 +455,12 @@ def show_driver_market(state):
     if idx < 1 or idx > len(market_drivers):
         return
 
+    # RELEASE OLD DRIVER
+    if state.player_driver:
+        # Set the previous driver back to Independent
+        state.player_driver["constructor"] = "Independent"
+        # Reset their performance to base (optional, but good practice)
+
     selected_driver = market_drivers[idx - 1]
     state.player_driver = selected_driver
     selected_driver["constructor"] = state.player_constructor
@@ -491,13 +508,16 @@ def run_game():
     state.reset_championship()
 
     while True:
-        # Auto-race logic remains same
+        # Check if there is a race this specific week of the year
+        week_of_year = time.week_of_year
+        race_key = f"{time.year}-{week_of_year}"
+
         if (
-            time.absolute_week in race_calendar
-            and time.absolute_week not in state.completed_races
+            week_of_year in race_calendar
+            and race_key not in state.completed_races
         ):
-            run_race(state, race_calendar[time.absolute_week], time)
-            state.completed_races.add(time.absolute_week)
+            run_race(state, race_calendar[week_of_year], time)
+            state.completed_races.add(race_key)
 
 
         console.clear()
@@ -536,8 +556,13 @@ def run_game():
         choice = console.input("> ")
 
         if choice == "1":
-            evt = race_calendar.get(time.absolute_week, "No race this week.")
-            console.print(Panel(f"[bold]{evt}[/bold]", title=f"Week {time.absolute_week} Event"))
+            # Check based on week_of_year for recurring calendar
+            week_num = time.week_of_year
+            evt = race_calendar.get(week_num, "No race this week.")
+            
+            # Display slightly more info
+            txt = f"[bold]{evt}[/bold]" if week_num in race_calendar else evt
+            console.print(Panel(txt, title=f"Week {week_num} Event"))
             console.input("[dim]Press Enter...[/dim]")
             
         elif choice == "2":
