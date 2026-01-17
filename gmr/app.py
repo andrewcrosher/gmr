@@ -4,7 +4,7 @@ from rich.table import Table
 from rich import box
 
 from .models import GameTime, GameState
-from .data import engines, chassis, race_calendar, drivers
+from .data import engines, chassis, race_calendar, drivers, reset_drivers
 from .config import MONTHS
 from .ui import (
     console, 
@@ -12,9 +12,12 @@ from .ui import (
     show_engine_shop, 
     show_chassis_shop, 
     show_driver_market, 
-    show_garage
+    show_garage,
+    upgrade_garage
 )
 from .race import run_race
+from .mechanics import process_random_events
+from .storage import save_game, load_game
 
 # ------------------------------
 # PLAYER SETUP
@@ -29,7 +32,12 @@ def setup_player(state):
     ))
 
     # Ask player for constructor/company name
-    state.player_constructor = console.input("[bold yellow]Enter the name of your racing company: [/bold yellow]")
+    while True:
+        name = console.input("[bold yellow]Enter the name of your racing company: [/bold yellow]").strip()
+        if name:
+            state.player_constructor = name
+            break
+        console.print("[red]Name cannot be empty.[/red]")
 
     # Garage starting state
     state.garage.level = 0
@@ -64,8 +72,31 @@ def run_game():
     state = GameState()
     
     console.clear()
-    setup_player(state)
-    state.reset_championship()
+    
+    # Start Menu
+    console.print(Panel.fit("[bold white]GMR - Grand Management Racing[/bold white]", style="bold red"))
+    console.print("[1] New Game")
+    console.print("[2] Load Game")
+    choice = console.input("> ")
+    
+    if choice == "2":
+        reset_drivers()
+        loaded_state, loaded_time = load_game()
+        if loaded_state:
+            state = loaded_state
+            time = loaded_time
+            console.print("[green]Game Loaded Successfully![/green]")
+            sys_time.sleep(1)
+        else:
+            console.print("[red]No save found or load failed. Starting new game...[/red]")
+            sys_time.sleep(1.5)
+            reset_drivers()
+            setup_player(state)
+            state.reset_championship()
+    else:
+        reset_drivers()
+        setup_player(state)
+        state.reset_championship()
 
     while True:
         # Check if there is a race this specific week of the year
@@ -110,6 +141,8 @@ def run_game():
         menu.add_row("4", "Garage Management")
         menu.add_row("5", "Driver Market")
         menu.add_row("6", "[bold yellow]Advance Week[/bold yellow]")
+        menu.add_row("7", "Save Game")
+        menu.add_row("8", "Exit Game")
         
         console.print(Panel(menu, title="Main Menu", border_style="white"))
 
@@ -118,10 +151,13 @@ def run_game():
         if choice == "1":
             # Check based on week_of_year for recurring calendar
             week_num = time.week_of_year
-            evt = race_calendar.get(week_num, "No race this week.")
+            evt = race_calendar.get(week_num)
             
-            # Display slightly more info
-            txt = f"[bold]{evt}[/bold]" if week_num in race_calendar else evt
+            if evt:
+                txt = f"[bold]{evt['name']}[/bold]\nType: {evt['type']}"
+            else:
+                txt = "No race this week."
+            
             console.print(Panel(txt, title=f"Week {week_num} Event"))
             console.input("[dim]Press Enter...[/dim]")
             
@@ -149,7 +185,7 @@ def run_game():
         elif choice == "4":  # Garage menu
             while True:
                 console.clear()
-                console.print(Panel("[1] View Stats\n[2] Engine Shop\n[3] Chassis Shop\n[4] Staff (WIP)\n[5] Back", title="Garage"))
+                console.print(Panel("[1] View Stats\n[2] Engine Shop\n[3] Chassis Shop\n[4] Staff (WIP)\n[5] Upgrade Facility\n[6] Back", title="Garage"))
                 sub = console.input("Garage > ")
                 if sub == "1":
                     show_garage(state)
@@ -162,15 +198,19 @@ def run_game():
                     console.print("[yellow]Coming soon![/yellow]")
                     sys_time.sleep(1)
                 elif sub == "5":
+                    upgrade_garage(state)
+                elif sub == "6":
                     break
 
         elif choice == "5":
             show_driver_market(state)
             
         elif choice == "6":
-            # Costs logic remains identical
+            # Costs logic
             staff_cost = state.garage.staff_count * state.garage.staff_salary
-            base_outgoings = state.garage.base_cost + staff_cost
+            driver_salary = state.player_driver.get("salary", 0) if state.player_driver else 0
+            
+            base_outgoings = state.garage.base_cost + staff_cost + driver_salary
             state.last_week_outgoings = base_outgoings + state.last_week_purchases
             state.money -= base_outgoings
             state.last_week_purchases = 0
@@ -179,6 +219,21 @@ def run_game():
             # Show a small transition animation
             with console.status("[bold green]Processing week...[/bold green]", spinner="dots"):
                 sys_time.sleep(0.5)
+                
+            # Trigger Random Events
+            events = process_random_events(state)
+            if events:
+                state.news.extend(events)
+        
+        elif choice == "7":
+            save_game(state, time)
+            console.print("[bold green]Game Saved![/bold green]")
+            sys_time.sleep(1)
+            
+        elif choice == "8":
+            console.print("Thanks for playing!")
+            break
+            
         else:
             console.print("[red]Invalid choice.[/red]")
             sys_time.sleep(0.5)
