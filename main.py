@@ -145,6 +145,40 @@ engines = [
 
 
 # ------------------------------
+# CHASSIS
+# ------------------------------
+chassis = [
+    {
+        "id": "dad_old_chassis",
+        "name": "Modified Pre-War",
+        "supplier": "Inherited",
+        "durability": 4,
+        "handling": 4,
+        "price": 0,
+        "description": "A rickety but familiar frame. Basic but functional."
+    },
+    {
+        "id": "rebuilt_chassis",
+        "name": "Standard Racing Frame",
+        "supplier": "Local Fabricator",
+        "durability": 6,
+        "handling": 5,
+        "price": 1000,
+        "description": "A robust, general-purpose frame. Better than grandpa's."
+    },
+    {
+        "id": "aero_chassis",
+        "name": "Lightweight Aero",
+        "supplier": "Speed-Tek",
+        "durability": 5,
+        "handling": 7,
+        "price": 2500,
+        "description": "Focus on agility and cornering. Less durable, but fast."
+    },
+]
+
+
+# ------------------------------
 # GAME STATE
 # ------------------------------
 class GameState:
@@ -155,6 +189,8 @@ class GameState:
         self.player_driver = None
         self.car_speed = 0
         self.car_reliability = 0
+        self.car_durability = 0
+        self.car_handling = 0
         self.constructor_earnings = 0
         self.last_week_income = 0
         self.last_week_outgoings = 0
@@ -162,8 +198,9 @@ class GameState:
         self.news = []
         self.garage = GarageState()
 
-        # Car / engine
+        # Car / engine & chassis
         self.current_engine = None
+        self.current_chassis = None
 
         # Track which absolute weeks have already had a race run
         self.completed_races = set()
@@ -193,11 +230,17 @@ def setup_player(state):
     state.garage.staff_count = 1
     state.garage.staff_salary = 20
 
-    # Starting engine
+    # Starting engine and chassis
     starting_engine = next(e for e in engines if e["id"] == "dad_old")
     state.current_engine = starting_engine
+
+    starting_chassis = next(c for c in chassis if c["id"] == "dad_old_chassis")
+    state.current_chassis = starting_chassis
+
     state.car_speed = starting_engine["speed"]
     state.car_reliability = starting_engine["reliability"]
+    state.car_durability = starting_chassis["durability"]
+    state.car_handling = starting_chassis["handling"]
 
     # Player driver is None for now
     state.player_driver = None
@@ -241,22 +284,29 @@ def run_race(state, race_name, time):
         if d == state.player_driver:
             # Player's car
             car_speed = state.car_speed
+            car_handling = state.car_handling
             car_reliability = state.car_reliability
+            car_durability = state.car_durability
         else:
-            # AI drivers
+            # AI drivers - assume average chassis stats for now
             ctor_stats = constructors.get(d["constructor"], {"speed": 5, "reliability": 5})
             car_speed = ctor_stats["speed"]
+            car_handling = 5  # Base handling for AI
             car_reliability = ctor_stats["reliability"]
+            car_durability = 5 # Base durability for AI
 
-        performance += car_speed
+        # Performance formula: Skill + Speed + Handling
+        performance += car_speed + (car_handling * 0.5)
 
         # Reliability + DNF chance
-        reliability = car_reliability
-        dnf_chance = (11 - reliability) * 0.02 * ERA_RELIABILITY_MULTIPLIER
+        # Combined reliability factor (Engine Rel + Chassis Durability)
+        total_reliability = (car_reliability + car_durability) / 2
+        dnf_chance = (11 - total_reliability) * 0.02 * ERA_RELIABILITY_MULTIPLIER
 
         if random.random() < dnf_chance:
+            failure_type = "Engine Failure" if random.random() > 0.5 else "Mechanical Failure"
             state.news.append(
-                f"[red]{d['name']} ({d['constructor']}) retired (Engine Failure).[/red]"
+                f"[red]{d['name']} ({d['constructor']}) retired ({failure_type}).[/red]"
             )
             continue
 
@@ -412,6 +462,76 @@ def show_engine_shop(state):
     sys_time.sleep(1.5)
 
 
+def show_chassis_shop(state):
+    console.clear()
+    
+    # Current Chassis Panel
+    if state.current_chassis:
+        cha = state.current_chassis
+        txt = (
+            f"[bold]{cha['name']}[/bold]\n"
+            f"Supplier: {cha['supplier']}\n\n"
+            f"Durability:  {'[red]▮[/red]' * cha['durability']}{'[dim]▮[/dim]' * (10-cha['durability'])}\n"
+            f"Handling:    {'[blue]▮[/blue]' * cha['handling']}{'[dim]▮[/dim]' * (10-cha['handling'])}\n\n"
+            f"[italic]{cha['description']}[/italic]"
+        )
+        console.print(Panel(txt, title="Current Installed Chassis", border_style="blue"))
+    else:
+        console.print("[red]No chassis installed![/red]")
+
+    # Shop Table
+    table = Table(title="Chassis Fabricator Catalogue", box=box.HEAVY_HEAD)
+    table.add_column("#", style="dim")
+    table.add_column("Name", style="bold")
+    table.add_column("Stats (Dur/Hnd)", justify="center")
+    table.add_column("Price", justify="right", style="green")
+    table.add_column("Description")
+
+    for idx, c in enumerate(chassis, start=1):
+        marker = " [bold blue](OWNED)[/bold blue]" if state.current_chassis and c["id"] == state.current_chassis["id"] else ""
+        stats = f"D:{c['durability']} H:{c['handling']}"
+        table.add_row(str(idx), f"{c['name']}{marker}", stats, f"£{c['price']}", c['description'])
+
+    console.print(table)
+
+    # Buying logic
+    choice = console.input("\nEnter [bold cyan]ID[/bold cyan] to buy, or Enter to go back: ").strip()
+
+    if choice == "":
+        return
+
+    if not choice.isdigit():
+        console.print("[red]Invalid input.[/red]")
+        return
+
+    idx = int(choice)
+    if idx < 1 or idx > len(chassis):
+        console.print("[red]Invalid selection.[/red]")
+        return
+
+    selected_chassis = chassis[idx - 1]
+
+    if state.current_chassis and selected_chassis["id"] == state.current_chassis["id"]:
+        console.print("[yellow]You already have this chassis installed.[/yellow]")
+        return
+
+    price = selected_chassis["price"]
+    if price > state.money:
+        console.print(f"[bold red]Insufficient Funds![/bold red] Cost: £{price}, You have: £{state.money}")
+        return
+
+    # Perform purchase
+    state.money -= price
+    state.last_week_purchases += price
+
+    state.current_chassis = selected_chassis
+    state.car_durability = selected_chassis["durability"]
+    state.car_handling = selected_chassis["handling"]
+
+    console.print(f"[bold green]Purchased and installed {selected_chassis['name']}![/bold green]")
+    sys_time.sleep(1.5)
+
+
 def show_driver_market(state):
     console.clear()
     
@@ -483,11 +603,16 @@ def show_garage(state):
 
     # Car Stats visualization
     eng_name = state.current_engine['name'] if state.current_engine else "None"
+    chas_name = state.current_chassis['name'] if state.current_chassis else "None"
     
     car_panel = Panel(
-        f"Engine: [bold]{eng_name}[/bold]\n"
+        f"Engine:      [bold]{eng_name}[/bold]\n"
+        f"Chassis:     [bold]{chas_name}[/bold]\n"
         f"Speed:       [cyan]{state.car_speed}[/cyan]\n"
-        f"Reliability: [green]{state.car_reliability}[/green]",
+        f"Acceleration:[cyan]{state.current_engine['acceleration']}[/cyan]\n"
+        f"Handling:    [blue]{state.car_handling}[/blue]\n"
+        f"Reliability: [green]{state.car_reliability}[/green]\n"
+        f"Durability:  [green]{state.car_durability}[/green]",
         title="Car Status",
         border_style="yellow"
     )
@@ -589,7 +714,7 @@ def run_game():
         elif choice == "4":  # Garage menu
             while True:
                 console.clear()
-                console.print(Panel("[1] View Stats\n[2] Engine Shop\n[3] Staff (WIP)\n[4] Back", title="Garage"))
+                console.print(Panel("[1] View Stats\n[2] Engine Shop\n[3] Chassis Shop\n[4] Staff (WIP)\n[5] Back", title="Garage"))
                 sub = console.input("Garage > ")
                 if sub == "1":
                     show_garage(state)
@@ -597,9 +722,11 @@ def run_game():
                 elif sub == "2":
                     show_engine_shop(state)
                 elif sub == "3":
+                    show_chassis_shop(state)
+                elif sub == "4":
                     console.print("[yellow]Coming soon![/yellow]")
                     sys_time.sleep(1)
-                elif sub == "4":
+                elif sub == "5":
                     break
 
         elif choice == "5":
