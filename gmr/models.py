@@ -25,6 +25,17 @@ class GameTime:
         """Returns the week number of the current year (1-48)."""
         return (self.month * 4) + self.week
 
+    def to_dict(self):
+        return {"year": self.year, "month": self.month, "week": self.week, "absolute_week": self.absolute_week}
+
+    @classmethod
+    def from_dict(cls, data):
+        gt = cls(data["year"])
+        gt.month = data["month"]
+        gt.week = data["week"]
+        gt.absolute_week = data["absolute_week"]
+        return gt
+
 
 # ------------------------------
 # GARAGE STATE
@@ -40,6 +51,15 @@ class GarageState:
         self.customer_parts_only = True
         self.r_and_d_enabled = False
         self.factory_team = False
+
+    def to_dict(self):
+        return vars(self)
+
+    @classmethod
+    def from_dict(cls, data):
+        gs = cls()
+        gs.__dict__.update(data)
+        return gs
 
 
 # ------------------------------
@@ -71,3 +91,21 @@ class GameState:
 
     def reset_championship(self):
         self.points = {d["name"]: 0 for d in drivers}
+
+    def to_dict(self):
+        data = vars(self).copy()
+        data["garage"] = self.garage.to_dict()
+        data["completed_races"] = list(self.completed_races)
+        return data
+
+    @classmethod
+    def from_dict(cls, data):
+        gs = cls()
+        if "garage" in data:
+            garage_data = data.pop("garage")
+            gs.garage = GarageState.from_dict(garage_data)
+        if "completed_races" in data:
+            completed_races = data.pop("completed_races")
+            gs.completed_races = set(completed_races)
+        gs.__dict__.update(data)
+        return gs

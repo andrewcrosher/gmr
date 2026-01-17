@@ -5,20 +5,27 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
 from rich import box
 
 from .config import POINTS_TABLE, PRIZE_MONEY, CONSTRUCTOR_SHARE, ERA_RELIABILITY_MULTIPLIER
-from .data import drivers, constructors, race_calendar
+from .data import drivers, constructors, race_calendar, weather_options
 from .ui import console
 from .mechanics import calculate_driver_performance
 
 # ------------------------------
 # RACE LOGIC (VISUALIZED)
 # ------------------------------
-def run_race(state, race_name, time):
+def run_race(state, race_info, time):
+    race_name = race_info['name']
+    race_type = race_info['type']
+    weather = random.choice(weather_options)
+
     console.clear()
     state.news.append(f"=== {race_name} ===")
+    state.news.append(f"Conditions: {weather} | Track: {race_type}")
     state.last_week_income = 0
     
     # --- VISUAL RACE SIMULATION ---
     console.rule(f"[bold red]{race_name}[/bold red]")
+    console.print(f"[bold white]Conditions:[/bold white] {weather}  [bold white]Track Type:[/bold white] {race_type}", justify="center")
+    
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -35,7 +42,9 @@ def run_race(state, race_name, time):
     finishers = []
 
     for d in drivers:
-        performance, did_finish, failure_reason = calculate_driver_performance(d, state, constructors)
+        performance, did_finish, failure_reason = calculate_driver_performance(
+            d, state, constructors, weather, race_type
+        )
 
         if not did_finish:
             state.news.append(

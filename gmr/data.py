@@ -1,22 +1,32 @@
+import copy
+
 # Game Data
 
-drivers = [
-    {"name": "Carlo Bianci", "constructor": "Enzoni", "skill": 7, "consistency": 6},
-    {"name": "Alberto Rossi", "constructor": "Enzoni", "skill": 7, "consistency": 7},
+_default_drivers = [
+    {"name": "Carlo Bianci", "constructor": "Enzoni", "skill": 7, "consistency": 6, "salary": 100, "signing_fee": 500},
+    {"name": "Alberto Rossi", "constructor": "Enzoni", "skill": 7, "consistency": 7, "salary": 110, "signing_fee": 550},
 
-    {"name": "Emmanuel Dubois", "constructor": "Independent", "skill": 5, "consistency": 5},
-    {"name": "George McCallister", "constructor": "Independent", "skill": 5, "consistency": 5},
-    {"name": "Hans Keller", "constructor": "Independent", "skill": 5, "consistency": 4},
-    {"name": "Luis Navarro", "constructor": "Independent", "skill": 4, "consistency": 6},
-    {"name": "Ivan Petrov", "constructor": "Independent", "skill": 4, "consistency": 5},
-    {"name": "Antonio Marquez", "constructor": "Independent", "skill": 5, "consistency": 3},
+    {"name": "Emmanuel Dubois", "constructor": "Independent", "skill": 5, "consistency": 5, "salary": 40, "signing_fee": 150},
+    {"name": "George McCallister", "constructor": "Independent", "skill": 5, "consistency": 5, "salary": 40, "signing_fee": 150},
+    {"name": "Hans Keller", "constructor": "Independent", "skill": 5, "consistency": 4, "salary": 35, "signing_fee": 120},
+    {"name": "Luis Navarro", "constructor": "Independent", "skill": 4, "consistency": 6, "salary": 30, "signing_fee": 100},
+    {"name": "Ivan Petrov", "constructor": "Independent", "skill": 4, "consistency": 5, "salary": 30, "signing_fee": 100},
+    {"name": "Antonio Marquez", "constructor": "Independent", "skill": 5, "consistency": 3, "salary": 35, "signing_fee": 120},
 
     # Extra independents for driver market
-    {"name": "Franco Moretti", "constructor": "Independent", "skill": 6, "consistency": 6},
-    {"name": "Peter Lang", "constructor": "Independent", "skill": 6, "consistency": 5},
-    {"name": "Jan Novak", "constructor": "Independent", "skill": 5, "consistency": 6},
-    {"name": "Mikel Herrera", "constructor": "Independent", "skill": 4, "consistency": 7},
+    {"name": "Franco Moretti", "constructor": "Independent", "skill": 6, "consistency": 6, "salary": 60, "signing_fee": 250},
+    {"name": "Peter Lang", "constructor": "Independent", "skill": 6, "consistency": 5, "salary": 55, "signing_fee": 220},
+    {"name": "Jan Novak", "constructor": "Independent", "skill": 5, "consistency": 6, "salary": 45, "signing_fee": 180},
+    {"name": "Mikel Herrera", "constructor": "Independent", "skill": 4, "consistency": 7, "salary": 35, "signing_fee": 140},
 ]
+
+drivers = []
+
+def reset_drivers():
+    drivers.clear()
+    drivers.extend(copy.deepcopy(_default_drivers))
+
+reset_drivers()
 
 constructors = {
     "Enzoni": {"speed": 7, "reliability": 6},
@@ -24,11 +34,48 @@ constructors = {
 }
 
 race_calendar = {
-    5: "Marblethorpe GP",
-    12: "Château-des-Prés GP",
-    20: "Vallone GP",
-    28: "Rougemont GP"
+    5: {"name": "Marblethorpe GP", "type": "Balanced"},
+    12: {"name": "Château-des-Prés GP", "type": "High Speed"},
+    20: {"name": "Vallone GP", "type": "Technical"},
+    28: {"name": "Rougemont GP", "type": "Balanced"}
 }
+
+weather_options = ["Sunny", "Overcast", "Rain"]
+
+random_events = [
+    {
+        "id": "sponsor_bonus",
+        "title": "Local Sponsor Deal",
+        "text": "A local bakery wants to put their sticker on your car.",
+        "effect_type": "money",
+        "value": 200,
+        "probability": 0.1
+    },
+    {
+        "id": "parts_found",
+        "title": "Spare Parts Found",
+        "text": "You found some usable spare parts in the back of the shed.",
+        "effect_type": "money",
+        "value": 50,
+        "probability": 0.15
+    },
+    {
+        "id": "minor_accident",
+        "title": "Workshop Accident",
+        "text": "A heavy tool fell on the chassis. Minor repairs needed.",
+        "effect_type": "money",
+        "value": -100,
+        "probability": 0.05
+    },
+    {
+        "id": "engine_tuning",
+        "title": "Stroke of Genius",
+        "text": "Your mechanic found a way to squeeze a bit more power out of the engine.",
+        "effect_type": "car_speed",
+        "value": 1,
+        "probability": 0.02
+    }
+]
 
 engines = [
     {

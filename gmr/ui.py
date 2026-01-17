@@ -12,6 +12,7 @@ console = Console()
 def show_finances(state):
     garage = state.garage
     staff_cost = garage.staff_count * garage.staff_salary
+    driver_salary = state.player_driver.get("salary", 0) if state.player_driver else 0
     
     table = Table(title="Finances", box=box.ROUNDED)
     table.add_column("Item", style="cyan")
@@ -19,6 +20,7 @@ def show_finances(state):
 
     table.add_row("Base Garage Cost", f"£{garage.base_cost}")
     table.add_row(f"Staff Cost ({garage.staff_count})", f"£{staff_cost}")
+    table.add_row("Driver Salary", f"£{driver_salary}")
     
     if state.last_week_purchases > 0:
         table.add_row("Parts/Engines", f"[red]£{state.last_week_purchases}[/red]")
@@ -197,7 +199,8 @@ def show_driver_market(state):
     table.add_column("#", style="dim")
     table.add_column("Name", style="bold white")
     table.add_column("Skill", justify="center")
-    table.add_column("Consistency", justify="center")
+    table.add_column("Salary", justify="right", style="cyan")
+    table.add_column("Sign Fee", justify="right", style="green")
     table.add_column("Status", style="italic")
 
     for idx, d in enumerate(market_drivers, start=1):
@@ -208,6 +211,8 @@ def show_driver_market(state):
             f"[{style}]{d['name']}[/{style}]", 
             str(d['skill']), 
             str(d['consistency']), 
+            f"£{d.get('salary', 0)}/wk",
+            f"£{d.get('signing_fee', 0)}",
             status
         )
 
@@ -220,6 +225,23 @@ def show_driver_market(state):
     idx = int(choice)
     if idx < 1 or idx > len(market_drivers):
         return
+
+    selected_driver = market_drivers[idx - 1]
+    
+    if selected_driver == state.player_driver:
+         console.print("[yellow]You already employ this driver.[/yellow]")
+         return
+
+    # Check Funds for Signing Fee
+    signing_fee = selected_driver.get("signing_fee", 0)
+    if signing_fee > state.money:
+        console.print(f"[bold red]Insufficient Funds![/bold red] Signing Fee: £{signing_fee}, You have: £{state.money}")
+        sys_time.sleep(1.5)
+        return
+
+    # Pay Signing Fee
+    state.money -= signing_fee
+    state.last_week_purchases += signing_fee
 
     # RELEASE OLD DRIVER
     if state.player_driver:
@@ -265,3 +287,39 @@ def show_garage(state):
 
     console.print(Panel(info_table, title="Facilities", border_style="blue"))
     console.print(car_panel)
+
+
+def upgrade_garage(state):
+    garage = state.garage
+    console.clear()
+    
+    if garage.level >= 2:
+        console.print("[green]Facilities are at maximum level.[/green]")
+        sys_time.sleep(1.5)
+        return
+
+    # Define upgrades
+    next_level = garage.level + 1
+    cost = 2000 if next_level == 1 else 5000
+    new_cost = 150 if next_level == 1 else 300
+    title = "Small Workshop" if next_level == 1 else "Dedicated Factory"
+    
+    console.print(Panel(
+        f"Upgrade to [bold]{title}[/bold]?\n"
+        f"Cost: [red]£{cost}[/red]\n"
+        f"New Weekly Cost: £{new_cost}\n\n"
+        "Benefits: Unlock new capabilities (Future Update).",
+        title="Upgrade Facilities"
+    ))
+    
+    if console.input("Confirm Upgrade (y/n)? ").lower() == 'y':
+        if state.money >= cost:
+            state.money -= cost
+            state.last_week_purchases += cost
+            garage.level = next_level
+            garage.base_cost = new_cost
+            console.print("[bold green]Upgrade Complete![/bold green]")
+        else:
+            console.print("[bold red]Insufficient Funds![/bold red]")
+    
+    sys_time.sleep(1.5)
