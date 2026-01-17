@@ -208,3 +208,9 @@ __marimo__/
 
 # Save games
 savegame.json
+
+# Local history for Visual Studio Code
+.history/
+
+#vscode settings
+.vscode/settings.json
